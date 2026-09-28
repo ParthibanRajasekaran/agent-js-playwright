@@ -125,6 +125,7 @@ export class RPReporter implements Reporter {
     );
 
     this.extractEndpointProtocol();
+    this.wrapFinishLaunchForProtocolCorrection();
   }
 
   private extractEndpointProtocol(): void {
@@ -164,6 +165,43 @@ export class RPReporter implements Reporter {
       }
     }
     return response;
+  }
+
+  private wrapFinishLaunchForProtocolCorrection(): void {
+    const originalFinishLaunch = this.client.finishLaunch.bind(this.client);
+    const self = this;
+
+    this.client.finishLaunch = function(launchTempId: string, finishExecutionRQ?: any) {
+      const originalLog = console.log;
+
+      const wrappedPromise = new Promise<any>((resolve, reject) => {
+        console.log = ((...args: any[]) => {
+          const message = String(args[0] || '');
+          if (!message.includes('ReportPortal Launch Link:')) {
+            originalLog.apply(console, args);
+          }
+        }) as any;
+
+        const result = originalFinishLaunch(launchTempId, finishExecutionRQ);
+
+        result.promise
+          .then((response: any) => {
+            console.log = originalLog;
+            self.applyProtocolCorrection(response);
+            originalLog(`\nReportPortal Launch Link: ${response.link}`);
+            resolve(response);
+          })
+          .catch((error: any) => {
+            console.log = originalLog;
+            reject(error);
+          });
+      });
+
+      return {
+        tempId: launchTempId,
+        promise: wrappedPromise,
+      };
+    };
   }
 
   addRequestToPromisesQueue<T>(promise: Promise<T>, failMessage: string): void {
