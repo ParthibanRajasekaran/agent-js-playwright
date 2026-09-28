@@ -823,9 +823,7 @@ export class RPReporter implements Reporter {
         endTime: clientHelpers.now(),
         ...(this.customLaunchStatus && { status: this.customLaunchStatus }),
       });
-      const wrappedPromise = promise.then((response) =>
-        this.applyProtocolCorrection(response),
-      );
+      const wrappedPromise = promise.then((response) => this.applyProtocolCorrection(response));
       this.addRequestToPromisesQueue(wrappedPromise, 'Failed to finish launch.');
     }
 
