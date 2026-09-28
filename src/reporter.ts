@@ -173,34 +173,32 @@ export class RPReporter implements Reporter {
 
     this.client.finishLaunch = function(launchTempId: string, finishExecutionRQ?: any) {
       const originalLog = console.log;
+      let linkLogged = false;
 
-      const wrappedPromise = new Promise<any>((resolve, reject) => {
-        console.log = ((...args: any[]) => {
-          const message = String(args[0] || '');
-          if (!message.includes('ReportPortal Launch Link:')) {
-            originalLog.apply(console, args);
-          }
-        }) as any;
+      const patchedLog = ((...args: any[]): void => {
+        const message = String(args[0] || '');
+        if (message.includes('ReportPortal Launch Link:') && !linkLogged) {
+          linkLogged = true;
+          return;
+        }
+        originalLog.apply(console, args);
+      }) as any;
 
-        const result = originalFinishLaunch(launchTempId, finishExecutionRQ);
+      console.log = patchedLog;
 
-        result.promise
-          .then((response: any) => {
-            console.log = originalLog;
-            self.applyProtocolCorrection(response);
-            originalLog(`\nReportPortal Launch Link: ${response.link}`);
-            resolve(response);
-          })
-          .catch((error: any) => {
-            console.log = originalLog;
-            reject(error);
-          });
-      });
+      const result = originalFinishLaunch(launchTempId, finishExecutionRQ);
 
-      return {
-        tempId: launchTempId,
-        promise: wrappedPromise,
-      };
+      result.promise
+        .then((response: any) => {
+          console.log = originalLog;
+          self.applyProtocolCorrection(response);
+          originalLog(`\nReportPortal Launch Link: ${response.link}`);
+        })
+        .catch(() => {
+          console.log = originalLog;
+        });
+
+      return result;
     };
   }
 
