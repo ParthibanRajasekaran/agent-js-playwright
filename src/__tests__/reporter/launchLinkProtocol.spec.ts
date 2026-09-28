@@ -2,6 +2,12 @@ import { RPReporter } from '../../reporter';
 import { RPClientMock } from '../mocks/RPClientMock';
 import type { ReportPortalConfig } from '../../models';
 
+/**
+ * Tests verify that:
+ * 1. Protocol correction happens internally via onEnd() → response.link mutation
+ * 2. NO duplicate launch link logging occurs (protocol fixing is silent)
+ * 3. Correction respects endpoint protocol configuration
+ */
 describe('launch link protocol correction', () => {
   let consoleLogSpy: jest.SpyInstance;
 
@@ -37,8 +43,8 @@ describe('launch link protocol correction', () => {
 
       await reporter.onEnd();
 
+      // Verify the link was fixed internally via response mutation
       expect(responseObject.link).toBe('https://reportportal.server/ui/#/project/launch/uuid');
-      // Verify the link was fixed internally without duplicate logging
       expect(consoleLogSpy).not.toHaveBeenCalledWith(
         expect.stringContaining('ReportPortal Launch Link:'),
       );
