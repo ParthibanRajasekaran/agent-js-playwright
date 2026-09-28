@@ -156,6 +156,16 @@ export class RPReporter implements Reporter {
     return link;
   }
 
+  private applyProtocolCorrection(response: any): any {
+    if (response?.link) {
+      const fixedLink = this.fixLaunchLink(response.link);
+      if (fixedLink !== response.link) {
+        response.link = fixedLink;
+      }
+    }
+    return response;
+  }
+
   addRequestToPromisesQueue<T>(promise: Promise<T>, failMessage: string): void {
     this.promises.push(promiseErrorHandler(promise, failMessage));
   }
